@@ -57,15 +57,17 @@ public class DrawHelper {
                     minTemp = b;
             }
             Paint rectPaint = new Paint();
-
+            int testC = (int) MathHelper.map(32, 20, 32, 0, 255);
 
             for (int h=0; h<24; h++) {
                 for (int w=0; w<32; w++) {
                     int t = imageBytes[h*32 + w];
+
                     int colorIndex = (int) MathHelper.map(t, minTemp, maxTemp, 0, 255);
-                    int red = Color.red(camColors[colorIndex]);
-                    int green = Color.green(camColors[colorIndex]);
-                    int blue = Color.blue(camColors[colorIndex]);
+                    int colorCode = camColors[colorIndex];
+                    int red = (colorCode & 0xF800) >> 8;;
+                    int green = (colorCode & 0x07E0) >> 3;
+                    int blue = (colorCode & 0x1F) << 3;
                     rectPaint.setColor(Color.rgb(red, green, blue));
                     rectPaint.setAlpha(160);
                     Rect r = new Rect();

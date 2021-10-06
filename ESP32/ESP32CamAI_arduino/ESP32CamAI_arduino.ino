@@ -1,12 +1,3 @@
-#include <ArduinoJson.h>
-
-#include <Chrono.h>
-#include <LightChrono.h>
-
-#include <SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library.h>
-
-#include <Wire.h>
-
 /*
 BSD 2-Clause License
 
@@ -36,13 +27,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <Adafruit_MLX90640.h>
 #include <WebSocketsServer.h>
-#include <LiFuelGauge.h>
+//#include <LiFuelGauge.h>
+//#include <SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library.h>
+//#include <ArduinoJson.h>
+#include <Wire.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include "camera_wrap.h"
+#include <LightChrono.h>
 
 #define I2C_SDA 15
 #define I2C_SCL 14
+#define THERMARR 768
 // #define DEBUG
 // #define SAVE_IMG
 
@@ -59,11 +55,13 @@ const char* ssid = "Spanbil #71";    // <<< change this as yours
 const char* password = "3RedApples"; // <<< change this as yours
 //holds the current upload
 int cameraInitState = -1;
+int failCount = 0;
 uint8_t* jpgBuff = new uint8_t[68123];
 size_t   jpgLength = 0;
 uint8_t camNo=0;
 bool clientConnected = false;
 bool isFrameReady = false;
+volatile bool isSendingThermal = false;
 TaskHandle_t Task1;
 //Creating UDP Listener Object. 
 WiFiUDP UDPServer;
@@ -83,17 +81,17 @@ const unsigned long intervalServo = 10;
 
 TwoWire I2CSensors = TwoWire(0);
 
-LiFuelGauge gauge(MAX17043, I2CSensors);
+//LiFuelGauge gauge(MAX17043, I2CSensors);
 Adafruit_MLX90640 mlx;
-Chrono LipoChrono;
-Chrono ThermalChrono;
+LightChrono LipoChrono;
+LightChrono ThermalChrono;
 
 String outputStr;
 double batLvl = 0.0;
 double batVolt = 0.0;
 
-float frame[32*24]; // buffer for full frame of temperatures
-byte bytearray[32*24];
+float frame[THERMARR]; // buffer for full frame of temperatures
+byte bytearray[THERMARR];
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
 
@@ -102,6 +100,8 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
           Serial.printf("[%u] Disconnected!\n", num);
           camNo = num;
           clientConnected = false;
+          isSendingThermal = false;
+          isFrameReady = false;
           vTaskDelete(Task1);
           break;
       case WStype_CONNECTED:
@@ -110,7 +110,7 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
           xTaskCreatePinnedToCore(
             getThermalFrame, /* Function to implement the task */
             "ThermaTask", /* Name of the task */
-            16384,  /* Stack size in words */
+            10000,  /* Stack size in words */
             NULL,  /* Task input parameter */
             0,  /* Priority of the task */
             &Task1,  /* Task handle. */
@@ -184,15 +184,15 @@ void setup(void) {
   #ifdef DEBUG
   Serial.setDebugOutput(true);
   #endif
-  disableCore0WDT();
+  //disableCore0WDT();
   disableCore1WDT();
   pinMode(LED_BUILT_IN, OUTPUT);
   digitalWrite(LED_BUILT_IN, LOW);
 
   I2CSensors.begin(I2C_SDA, I2C_SCL, 400000);
-  gauge.reset();  // Resets MAX17043
+  //gauge.reset();  // Resets MAX17043
   delay(200);  // Waits for the initial measurements to be made
-  gauge.setAlertThreshold(10);
+  //gauge.setAlertThreshold(10);
     
   cameraInitState = initCamera();
   Serial.printf("camera init state %d\n", cameraInitState);
@@ -227,13 +227,22 @@ void setup(void) {
 
 void getThermalFrame( void * pvParameters ) {
   initThermal();
-  for(;;){
-    if (ThermalChrono.hasPassed(250) && clientConnected == true) {
-      ThermalChrono.restart();
-      if (mlx.getFrame(frame) != 0) {
-        Serial.println("Failed");
+  while(1){
+    if (ThermalChrono.hasPassed(250)) {
+      if (clientConnected == true && !isSendingThermal) {
+        ThermalChrono.restart(); //Only reset when all criteria is meet, will givet frame faster
+        if (mlx.getFrame(frame) != 0) {
+          Serial.println("Failed");
+          failCount++;
+          if (failCount > 2) {
+            initThermal(); //Something whent wrong, re-init the device
+          }
+         } else {
+          isFrameReady = true;
+          failCount = 0;
+        }
       } else {
-        isFrameReady = true;
+        Serial.println("criteria not meet.");
       }
     }
   }
@@ -252,24 +261,27 @@ void loop(void) {
     processUDPData();
   }
   
-  if (LipoChrono.hasPassed(15000) && clientConnected == true) {
+  if (LipoChrono.hasPassed(5000) && clientConnected == true) {
     LipoChrono.restart();
-    batLvl = gauge.getSOC();
-    batVolt = gauge.getVoltage();
-    DynamicJsonDocument  jsonRoot(128);
-    jsonRoot["charge"] = batLvl;
-    jsonRoot["voltage"] = batVolt;
+    //heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
+    //batLvl = gauge.getSOC();
+    //batVolt = gauge.getVoltage();
+    //DynamicJsonDocument  jsonRoot(128);
+    //jsonRoot["charge"] = batLvl;
+    //jsonRoot["voltage"] = batVolt;
 
-    outputStr = "";
-    serializeJson(jsonRoot,outputStr);
-    jsonRoot.clear();
-    webSocket.sendTXT(camNo, outputStr);
+    
+    //serializeJson(jsonRoot,outputStr);
+    //jsonRoot.clear();
+    //webSocket.sendTXT(camNo, outputStr);
   }
 
   if (isFrameReady) {
-    for (uint8_t i = 0; i < 32*24; ++i) { bytearray[i] = static_cast<byte>(frame[i]); }
-    webSocket.sendBIN(camNo, bytearray, 32*24);
+    isSendingThermal = true;
+    for (size_t i{}; i < THERMARR; ++i) { bytearray[i] = static_cast<byte>(frame[i]); }
+    webSocket.sendBIN(camNo, bytearray, THERMARR);
     isFrameReady = false;
+    isSendingThermal = false;
   }
   
 }

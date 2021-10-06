@@ -115,11 +115,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         } else {
 
                             final Bitmap bmp= BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
-                            Bitmap dstBitmap = Bitmap.createBitmap(
-                                    bmp.getWidth() , // Width
-                                    bmp.getHeight() , // Height
-                                    Bitmap.Config.ARGB_8888 // Config
-                            );
+
                             if (bmp == null)
                             {
                                 return;
@@ -127,18 +123,29 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             int viewWidth = mServerImageView.getWidth();
                             Matrix matrix = new Matrix();
                             matrix.postRotate(90);
-                            final Bitmap bmp_traspose = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true );
+                            //matrix.preScale(1.6f, 1f);
 
+                            int bmpWidth = bmp.getWidth();
+                            int bmpHeight = bmp.getHeight();
+                            //Bitmap croppedBmp = Bitmap.createBitmap(bmp, 32, 24, bmp.getWidth() - 32, bmp.getHeight() - 24);
+
+                            final Bitmap bmp_traspose = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), matrix, true );
+                            Bitmap croppedBmp = Bitmap.createScaledBitmap(bmp_traspose, bmp.getWidth(), (int) (bmp.getHeight() * 1.5f), false);
+                            Bitmap dstBitmap = Bitmap.createBitmap(
+                                    bmp.getWidth() , // Width
+                                    bmp.getHeight() , // Height
+                                    Bitmap.Config.ARGB_8888 // Config
+                            );
 
                             Canvas canvas = new Canvas(dstBitmap);
                             canvas.drawBitmap(
-                                    bmp_traspose, // Bitmap
+                                    croppedBmp, // Bitmap
                                     0, // Left
-                                    0, // Top
+                                    -(bmpHeight * 0.3f), // Top
                                     null // Paint
                             );
                             if (thermalBytes != null && thermalBytes.length > 0) {
-                                Bitmap ThermalBmp = DrawHelper.drawThermal(thermalBytes, bmp_traspose.getHeight(), bmp_traspose.getWidth());
+                                Bitmap ThermalBmp = DrawHelper.drawThermal(thermalBytes, bmp.getHeight(), bmp.getWidth());
                                 canvas.drawBitmap(
                                         ThermalBmp, // Bitmap
                                         0, // Left
@@ -147,9 +154,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 );
                             }
 
-                            float imagRatio = (float)dstBitmap.getHeight()/(float)dstBitmap.getWidth();
+                            float imagRatio = (float)bmp.getHeight()/(float)bmp.getWidth();
                             int dispViewH = (int)(viewWidth*imagRatio);
-                            mServerImageView.setImageBitmap(Bitmap.createScaledBitmap(dstBitmap, viewWidth, dispViewH, false));
+                            mServerImageView.setImageBitmap(dstBitmap);//Bitmap.createScaledBitmap(dstBitmap, viewWidth, dispViewH, false));
                         }
                     }
                 });
