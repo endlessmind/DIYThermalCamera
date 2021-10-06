@@ -1,7 +1,7 @@
 # DIYThermalCamera
  Fully working software to build a working thermal camera
 
-#Status
+##Status
 Working:
 -OV2640
 -MLX90640
