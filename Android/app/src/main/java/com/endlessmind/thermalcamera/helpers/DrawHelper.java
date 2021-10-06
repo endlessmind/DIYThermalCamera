@@ -57,7 +57,6 @@ public class DrawHelper {
                     minTemp = b;
             }
             Paint rectPaint = new Paint();
-            int testC = (int) MathHelper.map(32, 20, 32, 0, 255);
 
             for (int h=0; h<24; h++) {
                 for (int w=0; w<32; w++) {
