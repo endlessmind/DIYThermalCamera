@@ -1,6 +1,8 @@
+#include <BluetoothSerial.h>
+
 #include <Adafruit_MLX90640.h>
 #include <WebSocketsServer.h>
-#include <LiFuelGauge.h>
+//#include <LiFuelGauge.h>
 //#include <ArduinoJson.h>
 #include <Wire.h>
 #include <WiFi.h>
@@ -8,8 +10,15 @@
 #include "camera_wrap.h"
 #include <LightChrono.h>
 
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#endif
+
+
 #define I2C_SDA 15
 #define I2C_SCL 14
+#define I2C2_SDA 2
+#define I2C2_SCL 13
 #define THERMARR 768
 // #define DEBUG
 // #define SAVE_IMG
@@ -52,10 +61,12 @@ unsigned long previousMillisServo = 0;
 const unsigned long intervalServo = 10;
 
 TwoWire I2CSensors = TwoWire(0);
-LiFuelGauge gauge(MAX17043, I2CSensors);
+//TwoWire I2CSensors2 = TwoWire(0);
+//LiFuelGauge gauge(MAX17043, I2CSensors2);
 Adafruit_MLX90640 mlx;
 LightChrono LipoChrono;
 LightChrono ThermalChrono;
+BluetoothSerial SerialBT;
 
 String outputStr;
 double batLvl = 0.0;
@@ -112,18 +123,7 @@ void processUDPData(){
       portRemote = UDPServer.remotePort();
 
       strPackage = String((const char*)packetBuffer);
-  #ifdef DEBUG
-      Serial.print("receive: ");
-      // for (int y = 0; y < RECVLENGTH; y++){
-      //   Serial.print(packetBuffer[y]);
-      //   Serial.print("\n");
-      // }
-      Serial.print(strPackage);
-      Serial.print(" from: ");
-      Serial.print(addrRemote);
-      Serial.print(":");
-      Serial.println(portRemote);
-  #endif
+
       if(strPackage.equals("whoami")){
           UDPServer.beginPacket(addrRemote, portRemote-1);
           String res = "ESP32-CAM";
@@ -141,6 +141,12 @@ void processUDPData(){
 
 }
 
+void processBTData() {
+  if (SerialBT.available()) {
+    char inc = SerialBT.read();
+  }
+}
+
 void setup(void) {
 
   Serial.begin(115200);
@@ -148,14 +154,16 @@ void setup(void) {
   #ifdef DEBUG
   Serial.setDebugOutput(true);
   #endif
+  SerialBT.begin("ThermalESP");
   //disableCore0WDT();
   disableCore1WDT();
   pinMode(LED_BUILT_IN, OUTPUT);
   digitalWrite(LED_BUILT_IN, LOW);
 
   I2CSensors.begin(I2C_SDA, I2C_SCL, 400000);
-  gauge.reset(); 
-  delay(200);
+  //I2CSensors2.begin(I2C2_SDA, I2C2_SCL, 100000);
+  //gauge.reset(); 
+  //delay(500);
  
     
   cameraInitState = initCamera();
