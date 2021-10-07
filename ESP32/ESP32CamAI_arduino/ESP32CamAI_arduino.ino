@@ -1,34 +1,6 @@
-/*
-BSD 2-Clause License
-
-Copyright (c) 2020, ANM-P4F
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
 #include <Adafruit_MLX90640.h>
 #include <WebSocketsServer.h>
-//#include <LiFuelGauge.h>
-//#include <SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library.h>
+#include <LiFuelGauge.h>
 //#include <ArduinoJson.h>
 #include <Wire.h>
 #include <WiFi.h>
@@ -80,8 +52,7 @@ unsigned long previousMillisServo = 0;
 const unsigned long intervalServo = 10;
 
 TwoWire I2CSensors = TwoWire(0);
-
-//LiFuelGauge gauge(MAX17043, I2CSensors);
+LiFuelGauge gauge(MAX17043, I2CSensors);
 Adafruit_MLX90640 mlx;
 LightChrono LipoChrono;
 LightChrono ThermalChrono;
@@ -100,21 +71,14 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
           Serial.printf("[%u] Disconnected!\n", num);
           camNo = num;
           clientConnected = false;
-          isSendingThermal = false;
-          isFrameReady = false;
-          vTaskDelete(Task1);
+          //isSendingThermal = false;
+          //isFrameReady = false;
+          //vTaskDelete(Task1);
           break;
       case WStype_CONNECTED:
           Serial.printf("[%u] Connected!\n", num);
           clientConnected = true;
-          xTaskCreatePinnedToCore(
-            getThermalFrame, /* Function to implement the task */
-            "ThermaTask", /* Name of the task */
-            10000,  /* Stack size in words */
-            NULL,  /* Task input parameter */
-            0,  /* Priority of the task */
-            &Task1,  /* Task handle. */
-            0); /* Core where the task should run */
+          
           break;
       case WStype_TEXT:
       case WStype_BIN:
@@ -190,9 +154,9 @@ void setup(void) {
   digitalWrite(LED_BUILT_IN, LOW);
 
   I2CSensors.begin(I2C_SDA, I2C_SCL, 400000);
-  //gauge.reset();  // Resets MAX17043
-  delay(200);  // Waits for the initial measurements to be made
-  //gauge.setAlertThreshold(10);
+  gauge.reset(); 
+  delay(200);
+ 
     
   cameraInitState = initCamera();
   Serial.printf("camera init state %d\n", cameraInitState);
@@ -213,15 +177,23 @@ void setup(void) {
     delay(500);
     Serial.print(".");
   }
+  String ipAddress = WiFi.localIP().toString();;
   Serial.println("");
   Serial.print("Connected! IP address: ");
-  String ipAddress = WiFi.localIP().toString();;
   Serial.println(ipAddress);
 
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
   UDPServer.begin(UDPPort);
-
+  delay(500);
+  xTaskCreatePinnedToCore(
+            getThermalFrame, /* Function to implement the task */
+            "ThermaTask", /* Name of the task */
+            10000,  /* Stack size in words */
+            NULL,  /* Task input parameter */
+            0,  /* Priority of the task */
+            &Task1,  /* Task handle. */
+            0); /* Core where the task should run */
 
 }
 
@@ -242,7 +214,7 @@ void getThermalFrame( void * pvParameters ) {
           failCount = 0;
         }
       } else {
-        Serial.println("criteria not meet.");
+        //Serial.println("criteria not meet.");
       }
     }
   }
@@ -263,17 +235,16 @@ void loop(void) {
   
   if (LipoChrono.hasPassed(5000) && clientConnected == true) {
     LipoChrono.restart();
-    //heap_caps_print_heap_info(MALLOC_CAP_DEFAULT);
     //batLvl = gauge.getSOC();
     //batVolt = gauge.getVoltage();
     //DynamicJsonDocument  jsonRoot(128);
     //jsonRoot["charge"] = batLvl;
     //jsonRoot["voltage"] = batVolt;
-
-    
+    //Serial.println(gauge.getSOC());
     //serializeJson(jsonRoot,outputStr);
     //jsonRoot.clear();
-    //webSocket.sendTXT(camNo, outputStr);
+    outputStr = "{\"voltage\":" + String(3.67f) + ", \"soc\":" + String(64) + "\"}";
+    webSocket.sendTXT(camNo, outputStr);
   }
 
   if (isFrameReady) {
