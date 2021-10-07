@@ -1,9 +1,8 @@
-#include <BluetoothSerial.h>
-
 #include <Adafruit_MLX90640.h>
 #include <WebSocketsServer.h>
+#include <BluetoothSerial.h>
 //#include <LiFuelGauge.h>
-//#include <ArduinoJson.h>
+#include <ArduinoJson.h>
 #include <Wire.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
@@ -19,61 +18,65 @@
 #define I2C_SCL 14
 #define I2C2_SDA 2
 #define I2C2_SCL 13
+#define LED_BUILT_IN 4
 #define THERMARR 768
 // #define DEBUG
 // #define SAVE_IMG
 
-enum TRACK{
-  TRACK_NONE = 0,
-  TRACK_FW,
-  TRACK_LEFT,
-  TRACK_RIGHT,
-  TRACK_STOP
-};
-
 
 const char* ssid = "Spanbil #71";    // <<< change this as yours
 const char* password = "3RedApples"; // <<< change this as yours
-//holds the current upload
-int cameraInitState = -1;
+
+//THERMAL
 int failCount = 0;
-uint8_t* jpgBuff = new uint8_t[68123];
-size_t   jpgLength = 0;
-uint8_t camNo=0;
-bool clientConnected = false;
-bool isFrameReady = false;
-volatile bool isSendingThermal = false;
 TaskHandle_t Task1;
-//Creating UDP Listener Object. 
-WiFiUDP UDPServer;
-IPAddress addrRemote;
-unsigned int portRemote;
-unsigned int UDPPort = 6868;
-unsigned long currentMillis;
-const int RECVLENGTH = 16;
-byte packetBuffer[RECVLENGTH];
+float frame[THERMARR];
+byte bytearray[THERMARR];
+volatile bool isFrameReady = false;
+volatile bool isSendingThermal = false;
 
-WebSocketsServer webSocket = WebSocketsServer(86);
-String strPackage;
-
-const int LED_BUILT_IN        = 4;
-unsigned long previousMillisServo = 0;
-const unsigned long intervalServo = 10;
-
-TwoWire I2CSensors = TwoWire(0);
-//TwoWire I2CSensors2 = TwoWire(0);
-//LiFuelGauge gauge(MAX17043, I2CSensors2);
-Adafruit_MLX90640 mlx;
-LightChrono LipoChrono;
-LightChrono ThermalChrono;
-BluetoothSerial SerialBT;
-
+//MAX17043
 String outputStr;
 double batLvl = 0.0;
 double batVolt = 0.0;
 
-float frame[THERMARR]; // buffer for full frame of temperatures
-byte bytearray[THERMARR];
+
+//BLUETOOTH
+String btInc;
+
+//WEBCONNECTION
+uint8_t camNo=0;
+String strPackage;
+unsigned int portRemote;
+const int RECVLENGTH = 16;
+unsigned int UDPPort = 6868;
+unsigned long currentMillis;
+bool clientConnected = false;
+byte packetBuffer[RECVLENGTH];
+unsigned long previousMillis = 0;
+const unsigned long interval = 10;
+
+
+//OV2640 CAMERA
+uint8_t* jpgBuff = new uint8_t[68123];
+int cameraInitState = -1;
+size_t   jpgLength = 0;
+
+//CLASSES
+WebSocketsServer webSocket = WebSocketsServer(86);
+//LiFuelGauge gauge(MAX17043, I2CSensors2);
+//TwoWire I2CSensors2 = TwoWire(0);
+TwoWire I2CSensors = TwoWire(0);
+LightChrono ThermalChrono;
+BluetoothSerial SerialBT;
+LightChrono LipoChrono;
+Adafruit_MLX90640 mlx;
+IPAddress addrRemote;
+WiFiUDP UDPServer;
+
+
+
+
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
 
@@ -130,22 +133,44 @@ void processUDPData(){
           UDPServer.write((const uint8_t*)res.c_str(),res.length());
           UDPServer.endPacket();
           Serial.println("response");
-      }else if(strPackage.equals("ledon")){
-        digitalWrite(LED_BUILT_IN, HIGH);
-      }else if(strPackage.equals("ledoff")){
-        digitalWrite(LED_BUILT_IN, LOW);
       }
-
       memset(packetBuffer, 0, RECVLENGTH);
   }
 
 }
 
+
+
 void processBTData() {
   if (SerialBT.available()) {
-    char inc = SerialBT.read();
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, SerialBT);
+    int action = doc["action"];
+    if (action == 1) { //Wifi connect
+      String ss = doc["ssid"];
+      String pw = doc["pass"];
+      Serial.println("Got wifi credentials");
+      //connectToWifi(ss, pw);
+    }
+    /*
+     *  
+    if (action == 1) { //Wifi connect
+      connectToWifi(doc["ssid"], doc["pass"]);
+    } else if (action == 2) { //Set LED on/off
+        int state = doc["state"];
+        if (state == 0) {
+          digitalWrite(LED_BUILT_IN, LOW);
+        } else if (state == 1) {
+          digitalWrite(LED_BUILT_IN, HIGH);
+        }
+    } else if (action == 4) { //Thermal sensor on/off
+      
+    }
+    */
   }
 }
+
+
 
 void setup(void) {
 
@@ -154,7 +179,7 @@ void setup(void) {
   #ifdef DEBUG
   Serial.setDebugOutput(true);
   #endif
-  SerialBT.begin("ThermalESP");
+  //SerialBT.begin("ThermalESP");
   //disableCore0WDT();
   disableCore1WDT();
   pinMode(LED_BUILT_IN, OUTPUT);
@@ -164,7 +189,7 @@ void setup(void) {
   //I2CSensors2.begin(I2C2_SDA, I2C2_SCL, 100000);
   //gauge.reset(); 
   //delay(500);
- 
+ delay(1500);
     
   cameraInitState = initCamera();
   Serial.printf("camera init state %d\n", cameraInitState);
@@ -173,7 +198,7 @@ void setup(void) {
   }
   sensor_t * s = esp_camera_sensor_get();
   s->set_vflip(s, 1);
-  
+
   //WIFI INIT
   Serial.printf("Connecting to %s\n", ssid);
   if (String(WiFi.SSID()) != String(ssid)) {
@@ -212,17 +237,13 @@ void getThermalFrame( void * pvParameters ) {
       if (clientConnected == true && !isSendingThermal) {
         ThermalChrono.restart(); //Only reset when all criteria is meet, will givet frame faster
         if (mlx.getFrame(frame) != 0) {
-          Serial.println("Failed");
-          failCount++;
-          if (failCount > 2) {
-            initThermal(); //Something whent wrong, re-init the device
-          }
+            Serial.println("Failed");
+            failCount++;
+            if (failCount > 2) { initThermal(); } /*Something whent wrong, re-init the device */
          } else {
-          isFrameReady = true;
-          failCount = 0;
+            isFrameReady = true;
+            failCount = 0;
         }
-      } else {
-        //Serial.println("criteria not meet.");
       }
     }
   }
@@ -230,14 +251,15 @@ void getThermalFrame( void * pvParameters ) {
 
 void loop(void) {
   webSocket.loop();
+  //processBTData();
   if(clientConnected == true){
     grabImage(jpgLength, jpgBuff);
     webSocket.sendBIN(camNo, jpgBuff, jpgLength);
   }
 
   currentMillis = millis();
-  if (currentMillis - previousMillisServo >= intervalServo) {
-    previousMillisServo = currentMillis;
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
     processUDPData();
   }
   

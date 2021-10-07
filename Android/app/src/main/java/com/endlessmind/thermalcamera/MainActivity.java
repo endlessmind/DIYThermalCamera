@@ -2,6 +2,7 @@ package com.endlessmind.thermalcamera;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.bluetooth.BluetoothDevice;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -28,8 +29,13 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+import me.aflak.bluetooth.Bluetooth;
+import me.aflak.bluetooth.interfaces.BluetoothCallback;
+import me.aflak.bluetooth.interfaces.DeviceCallback;
+
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, BluetoothCallback, DeviceCallback {
     final String TAG = "MainActivity";
     private UDPSocket mUdpClient;
     private String mServerAddressBroadCast = "192.168.1.230";
@@ -53,6 +59,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean mObjDet = false;
     private boolean mLed = false;
 
+    Bluetooth bluetooth;
+
     private final Size CamResolution = new Size(640, 480);
 
     private OverlayView mTrackingOverlay;
@@ -75,6 +83,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             e.printStackTrace();
         }
         mServerImageView.setOnClickListener(MainActivity.this);
+        bluetooth = new Bluetooth(this);
+        bluetooth.setBluetoothCallback(this);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        bluetooth.onStart();
+        if(bluetooth.isEnabled()){
+            // doStuffWhenBluetoothOn() ...
+            bluetooth.connectToNameWithPortTrick("ThermalESP");
+        } else {
+            bluetooth.showEnableDialog(MainActivity.this);
+        }
     }
 
     private void connectWebSocket() {
@@ -212,5 +234,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //((Button) getActivity().findViewById(R.id.streamBtn)).setTextColor(Color.rgb(255,255,255));
             }
         }
+    }
+
+    @Override
+    public void onBluetoothTurningOn() {
+
+    }
+
+    @Override
+    public void onBluetoothOn() {
+        bluetooth.connectToNameWithPortTrick("ThermalESP");
+    }
+
+    @Override
+    public void onBluetoothTurningOff() {
+
+    }
+
+    @Override
+    public void onBluetoothOff() {
+
+    }
+
+    @Override
+    public void onUserDeniedActivation() {
+
+    }
+
+    @Override
+    public void onDeviceConnected(BluetoothDevice device) {
+        Log.e("MainActivity", device.getName());
+        bluetooth.send("{\"action\":1, \"ssid\":\"Spanbil #71\", \"pass\": \"3RedApples\"");
+    }
+
+    @Override
+    public void onDeviceDisconnected(BluetoothDevice device, String message) {
+
+    }
+
+    @Override
+    public void onMessage(byte[] message) {
+
+    }
+
+    @Override
+    public void onError(int errorCode) {
+
+    }
+
+    @Override
+    public void onConnectError(BluetoothDevice device, String message) {
+        Log.e("MainActivity", message);
     }
 }
