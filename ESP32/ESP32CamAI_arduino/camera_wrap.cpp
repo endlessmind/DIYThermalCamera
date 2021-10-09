@@ -33,10 +33,16 @@ int initCamera(){
   config.pixel_format = PIXFORMAT_JPEG;
   //init with high specs to pre-allocate larger buffers
   
+  if(psramFound()){
+    config.frame_size = FRAMESIZE_XGA;
+    config.jpeg_quality = 10;
+    config.fb_count = 2;
+  } else {
     // config.frame_size = FRAMESIZE_SVGA;
     config.frame_size = FRAMESIZE_VGA;
-    config.jpeg_quality = 25;
+    config.jpeg_quality = 12;
     config.fb_count = 1;
+  }
   
 
 #if defined(CAMERA_MODEL_ESP_EYE)

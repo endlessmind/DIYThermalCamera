@@ -8,13 +8,11 @@ Working:
 - Wifi
 - Websocket
 - Temperature color auto-rangeing in Android app
+- MAX17043
 
-Kindof working:
-- MAX17043 (Was working, but removed library to find cause of heap error)
 
 Still todo:
-- BT  -for wifi configuration and automatic device-detection from the Android app
 - Render battery information on Android output
-- Render temperature color map
+- Render temperature color map (I just skip this one, is it really needed?)
 - Render current temperature range
 - Maybe more settings like emissivity?
