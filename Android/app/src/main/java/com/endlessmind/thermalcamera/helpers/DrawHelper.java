@@ -135,22 +135,27 @@ public class DrawHelper {
 
     public static void drawCrosshair(Canvas canvas,MotionEvent mEvent,  int bW, int bH, View image)
     {
-
+        //A lot of screen size, pixel density and aspect ration compensation.. kind of.. sounds cool and complex tho..
         int h = image.getHeight();
         int w = image.getWidth();
+        //The ImageView is not in top-left corner of the display, so we compensate for that.
         float x = mEvent.getX() - image.getLeft();
         float y = mEvent.getY() - image.getTop();
+
+        //This is just for to be sure. It's not really needed to prevent an exception was we never divid by these variables.
+        //I did divid something with these variables in an earlier version of this algorithm, but it don't hurt to still have it so here it is.
         if (x < 0)
             x = 0;
 
         if (y < 0)
             y = 0;
 
+        //The bitmap will be scaled up to fit the devices screen height, we need to calculate the scaling factor.
         float heightR =  (float)h / (float)bH;
         float widthR = (float)w / (float)bW;
+        //and then we can use that to compensate for the scaling
         x = x / widthR;
         y = y / heightR;
-        //Log.e("KUK", "X: " + x + " - Y: " + y);
         Paint chPaint = new Paint();
         chPaint.setStyle(Paint.Style.FILL);
         chPaint.setColor(Color.BLACK);
