@@ -130,7 +130,7 @@ public class DrawHelper {
         return path;
     }
 
-    public static void drawBatteryStatus(Canvas canvas,int soc, double voltage, int max, int min, float w, float h, float round) {
+    public static void drawBatteryStatus(Canvas canvas,int soc, double voltage, double max, double min, float w, float h, float round) {
         //Remember, this is mirrored later on.
         float width = w, height =h, left = 20f, top = 10f;
         float lineOffset = 2f;
@@ -225,7 +225,7 @@ public class DrawHelper {
 
 
 
-    public static Bitmap drawThermal(byte[] imageBytes, int height, int width) {
+    public static Bitmap drawThermal(double[] imageBytes, int height, int width) {
         //Byte array should have a site of 768 bytes:
         Bitmap dstBitmap = Bitmap.createBitmap(
                 width , // Width
@@ -236,8 +236,8 @@ public class DrawHelper {
         if (imageBytes.length == 768) {
             int hMulti = height / 24;
             int wMulti = width / 32;
-            int maxTemp = 0, minTemp = 255;
-            for (byte b : imageBytes) {
+            double maxTemp = 0, minTemp = 255;
+            for (double b : imageBytes) {
                 if (b > maxTemp)
                     maxTemp = b;
 
@@ -255,7 +255,7 @@ public class DrawHelper {
 
             for (int h=0; h<24; h++) {
                 for (int w=0; w<32; w++) {
-                    int t = imageBytes[h*32 + w];
+                    double t = imageBytes[h*32 + w];
 
                     int colorIndex = (int) MathHelper.map(t, minTemp, maxTemp, 0, 255);
                     int colorCode = camColors[colorIndex];

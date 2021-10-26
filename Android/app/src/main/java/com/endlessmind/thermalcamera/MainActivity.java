@@ -52,10 +52,10 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     final byte[] mRequestConnect      = new byte[]{'w','h','o','a','m','i'};
     final byte[] mLedOn = new byte[]{'l','e','d','o','n'};
     final byte[] mLedOff = new byte[]{'l','e','d','o','f','f'};
-    byte[] thermalBytes;
+    double[] thermalBytes;
     private Bitmap mBitmap;
     double voltage, soc = 50f;
-    int maxTemp = 0, minTemp = 255;
+    double maxTemp = 0, minTemp = 255;
 
     ImageView mServerImageView;
     Handler mHandler = new Handler();
@@ -131,9 +131,18 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                         JSONObject obj = new JSONObject(message);
                         if (message.length() > 768) { //Thermal data would be a lot bigger than this. There is 768 of datapoints, not counting delimiters and decimals.
                             JSONArray dataPoints = obj.getJSONArray("data");
-                            double[] thermPoints = new double[dataPoints.length()]; //Our new points will be float/double
+                            thermalBytes = new double[dataPoints.length()]; //Our new points will be float/double
                             for (int i = 0; i < dataPoints.length(); i++) {
-                                thermPoints[i] =  dataPoints.getDouble(i);
+                                thermalBytes[i] =  dataPoints.getDouble(i);
+                            }
+
+                            maxTemp = 0; minTemp = 255; //reset the temps for each frame
+                            for (double b : thermalBytes) {
+                                if (b > maxTemp)
+                                    maxTemp = b;
+
+                                if (b < minTemp)
+                                    minTemp = b;
                             }
                         } else {
                             if (obj.has("voltage")) {
@@ -160,16 +169,9 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                         byte[] imageBytes= new byte[message.remaining()];
                         message.get(imageBytes);
                         if (message.limit() == 768) {
-                            thermalBytes = imageBytes.clone();
+                            //thermalBytes = imageBytes.clone();
 
-                            maxTemp = 0; minTemp = 255; //reset the temps for each frame
-                            for (byte b : imageBytes) {
-                                if (b > maxTemp)
-                                    maxTemp = b;
 
-                                if (b < minTemp)
-                                    minTemp = b;
-                            }
                         } else {
 
                             final Bitmap bmp= BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
