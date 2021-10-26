@@ -9,12 +9,13 @@ Working:
 - Websocket
 - Temperature color auto-rangeing in Android app
 - MAX17043
-
+- Render battery information on Android output
+- Render current temperature range
 
 Still todo:
-- Render battery information on Android output
+- Touch to get reading of specific area. (This is mostly implemented, but i think i will re-write most of the code and the structure was not ment for this kind of functionallity.)
+- Show selection on the warmest point.
 - Render temperature color map (I just skip this one, is it really needed?)
-- Render current temperature range
 - Maybe more settings like emissivity?
 
 Canceled:
