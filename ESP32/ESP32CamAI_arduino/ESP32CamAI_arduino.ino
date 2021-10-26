@@ -247,11 +247,13 @@ void loop(void) {
     isSendingThermal = true;
     String outStr = "{\"data\":[";
     for (size_t i{}; i < THERMARR; ++i) { 
-      outStr = outStr + String(frame[i]) + ",";
-      //bytearray[i] = static_cast<byte>(frame[i]);
+      if (i == THERMARR -1) {
+        outStr = outStr + String(frame[i]);
+      } else {
+        outStr = outStr + String(frame[i]) + ",";
+      }
     }
     outStr = outStr + "]}";
-    //webSocket.sendBIN(camNo, bytearray, THERMARR);
     webSocket.sendTXT(camNo, outStr);
     isFrameReady = false;
     isSendingThermal = false;

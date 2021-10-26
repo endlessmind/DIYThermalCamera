@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     private boolean mObjDet = false;
     private boolean mLed = false;
     private boolean connect = false;
+    private boolean gotThermal = false;
 
 
 
@@ -135,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                             for (int i = 0; i < dataPoints.length(); i++) {
                                 thermalBytes[i] =  dataPoints.getDouble(i);
                             }
-
+                            gotThermal = true;
                             maxTemp = 0; minTemp = 255; //reset the temps for each frame
                             for (double b : thermalBytes) {
                                 if (b > maxTemp)
@@ -151,13 +152,14 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                             if (obj.has("soc")) {
                                 soc = obj.getDouble("soc");
                             }
+                            Log.d("Websocket", message);
                         }
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
 
 
-                Log.d("Websocket", message);
+
             }
 
             @Override
@@ -204,7 +206,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                                     -(bmpHeight * 0.2f), // Top
                                     null // Paint
                             );
-                            if (thermalBytes != null && thermalBytes.length > 0) {
+                            if (gotThermal) {
                                 Bitmap ThermalBmp = DrawHelper.drawThermal(thermalBytes, bmp.getHeight(), bmp.getWidth());
                                 canvas.drawBitmap(
                                         ThermalBmp, // Bitmap
@@ -267,7 +269,8 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
             }
         } else {
             mStream = false;
-            mWebSocketClient.close();
+            if (mWebSocketClient != null)
+                mWebSocketClient.close();
         }
     }
 
@@ -282,7 +285,6 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
 
                 if (xPos < 100 && xPos > 0) {
                     if (yPos < 100 && yPos > 0) {
-                        Log.e(MainActivity.class.getSimpleName(), "YES!");
                         if (mLed) {
                             mUdpClient.sendBytes(mServerAddr, mServerPort, mLedOff);
                         } else {
@@ -291,12 +293,10 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                         }
                         mLed = !mLed;
                     } else {
-                        Log.e(MainActivity.class.getSimpleName(), "X: " +  xPos + " - Y: " + yPos);
                         connect = !connect;
                         handleConnect();
                     }
                 } else {
-                    Log.e(MainActivity.class.getSimpleName(), "X: " +  xPos + " - Y: " + yPos);
                     connect = !connect;
                     handleConnect();
                 }

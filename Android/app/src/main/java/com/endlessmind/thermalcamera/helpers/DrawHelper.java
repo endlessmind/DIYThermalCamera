@@ -199,12 +199,12 @@ public class DrawHelper {
             rectPaint.setStyle(Paint.Style.FILL);
             strLen = rectPaint.measureText(minStr);
             xPos = canvas.getWidth() - (left + (width + 20));
-            canvas.drawText(minStr, xPos - (strLen * 2.2f), finalY, rectPaint);
+            canvas.drawText(minStr, xPos - ((strLen + 10 ) * 2.2f), finalY, rectPaint);
 
             rectPaint.setColor(Color.BLACK);
             rectPaint.setStyle(Paint.Style.STROKE);
             rectPaint.setStrokeWidth(1f);
-            canvas.drawText(minStr, xPos - (strLen * 2.2f), finalY, rectPaint);
+            canvas.drawText(minStr, xPos - ((strLen + 10 )  * 2.2f), finalY, rectPaint);
 
             rectPaint.setColor(Color.WHITE);
             rectPaint.setStyle(Paint.Style.FILL);
@@ -233,7 +233,7 @@ public class DrawHelper {
                 Bitmap.Config.ARGB_8888 // Config
         );
         Canvas c = new Canvas(dstBitmap);
-        if (imageBytes.length == 768) {
+        if (imageBytes.length >= 768) {
             int hMulti = height / 24;
             int wMulti = width / 32;
             double maxTemp = 0, minTemp = 255;
