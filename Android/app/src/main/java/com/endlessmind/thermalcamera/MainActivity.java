@@ -20,7 +20,9 @@ import android.util.Size;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.endlessmind.thermalcamera.helpers.DrawHelper;
@@ -42,7 +44,7 @@ import java.util.List;
 
 
 
-public class MainActivity extends AppCompatActivity implements View.OnTouchListener {
+public class MainActivity extends AppCompatActivity implements View.OnTouchListener, View.OnClickListener {
     final String TAG = "MainActivity";
     private UDPSocket mUdpClient;
     private String mServerAddressBroadCast = "192.168.4.1";//"192.168.1.230";
@@ -58,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     double maxTemp = 0, minTemp = 255;
 
     ImageView mServerImageView;
+    LinearLayout llRoot;
     Handler mHandler = new Handler();
 
     private WebSocketClient mWebSocketClient;
@@ -71,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     private boolean gotThermal = false;
 
 
-
+    MotionEvent lastTap;
     private final Size CamResolution = new Size(640, 480);
 
     private OverlayView mTrackingOverlay;
@@ -83,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
         setContentView(R.layout.activity_main);
 
         mServerImageView = findViewById(R.id.imageView);
-
+        llRoot = findViewById(R.id.llRoot);
 
 
         mUdpClient = new UDPSocket(12345);
@@ -95,6 +98,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
             e.printStackTrace();
         }
         mServerImageView.setOnTouchListener(MainActivity.this);
+        llRoot.setOnClickListener(MainActivity.this);
     }
 
     @Override
@@ -182,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                             {
                                 return;
                             }
-                            int viewWidth = mServerImageView.getWidth();
+                            int viewHeight = mServerImageView.getHeight();
                             Matrix matrix = new Matrix();
                             matrix.postRotate(90);
                             //matrix.preScale(1.6f, 1f);
@@ -217,12 +221,20 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                             }
 
                             DrawHelper.drawBatteryStatus(canvas, (int)soc,voltage, maxTemp, minTemp, 60f, 25f, 6f);
+                            if (lastTap != null) {
+                                DrawHelper.drawCrosshair(canvas, lastTap, dstBitmap.getWidth(), dstBitmap.getHeight(), mServerImageView);
+                            } else {
+                                MotionEvent ev = MotionEvent.obtain(100, 100, 1, bmpWidth / 2, bmpHeight / 2, 1);
+                                DrawHelper.drawCrosshair(canvas, ev, dstBitmap.getWidth(), dstBitmap.getHeight(), mServerImageView);
+                            }
+
                             Bitmap icon = Bitmap.createScaledBitmap(DrawHelper.getTintentIcon(MainActivity.this, mLed), 36, 36, false);
                             Bitmap iconShadowed = DrawHelper.addShadow(icon, icon.getHeight(), icon.getWidth(), Color.BLACK, 1, 1,3);
                             canvas.drawBitmap(DrawHelper.createFlippedBitmap(iconShadowed, true, false), dstBitmap.getWidth() - (icon.getWidth() * 1.2f) , 10f, null);
 
-                            float imagRatio = (float)bmp.getHeight()/(float)bmp.getWidth();
-                            int dispViewH = (int)(viewWidth*imagRatio);
+                            float imagRatio = (float)dstBitmap.getWidth()/(float)dstBitmap.getHeight();
+                            int dispViewH = (int)(viewHeight*imagRatio);
+
                             mServerImageView.setImageBitmap(DrawHelper.createFlippedBitmap(dstBitmap, true, false));
                         }
                     }
@@ -280,8 +292,9 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
     public boolean onTouch(View view, MotionEvent motionEvent) {
         if (view == mServerImageView) {
             if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
-                float xPos = motionEvent.getX() - 500;
+                float xPos = motionEvent.getX();
                 float yPos = motionEvent.getY();
+
 
                 if (xPos < 100 && xPos > 0) {
                     if (yPos < 100 && yPos > 0) {
@@ -293,15 +306,21 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
                         }
                         mLed = !mLed;
                     } else {
-                        connect = !connect;
-                        handleConnect();
+                       lastTap = motionEvent;
                     }
                 } else {
-                    connect = !connect;
-                    handleConnect();
+                    lastTap = motionEvent;
                 }
             }
         }
         return true;
+    }
+
+    @Override
+    public void onClick(View view) {
+        if (view == llRoot) {
+            connect = !connect;
+            handleConnect();
+        }
     }
 }

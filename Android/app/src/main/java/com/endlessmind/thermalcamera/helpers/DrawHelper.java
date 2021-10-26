@@ -14,6 +14,9 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
 
 import com.endlessmind.thermalcamera.R;
 
@@ -128,6 +131,36 @@ public class DrawHelper {
         path.close();//Given close, last lineto can be removed.
 
         return path;
+    }
+
+    public static void drawCrosshair(Canvas canvas,MotionEvent mEvent,  int bW, int bH, View image)
+    {
+
+        int h = image.getHeight();
+        int w = image.getWidth();
+        float x = mEvent.getX() - image.getLeft();
+        float y = mEvent.getY() - image.getTop();
+        if (x < 0)
+            x = 0;
+
+        if (y < 0)
+            y = 0;
+
+        float heightR =  (float)h / (float)bH;
+        float widthR = (float)w / (float)bW;
+        x = x / widthR;
+        y = y / heightR;
+        //Log.e("KUK", "X: " + x + " - Y: " + y);
+        Paint chPaint = new Paint();
+        chPaint.setStyle(Paint.Style.FILL);
+        chPaint.setColor(Color.BLACK);
+        //Draw the vertical line
+        canvas.drawLine(bW - x, y - 15, bW - x, y - 5, chPaint); //Goes up
+        canvas.drawLine(bW - x, y + 15, bW - x, y + 5, chPaint); //Goes down
+
+        //Draw the horizontal lines
+        canvas.drawLine((bW - x) - 15, y, (bW - x) - 5, y, chPaint); //Left side
+        canvas.drawLine((bW - x) + 15, y, (bW - x) + 5, y, chPaint); //Right side
     }
 
     public static void drawBatteryStatus(Canvas canvas,int soc, double voltage, double max, double min, float w, float h, float round) {
