@@ -29,6 +29,7 @@ import com.endlessmind.thermalcamera.views.OverlayView;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -125,17 +126,28 @@ public class MainActivity extends AppCompatActivity implements View.OnTouchListe
 
             @Override
             public void onMessage(String message){
-                try {
-                    JSONObject obj = new JSONObject(message);
-                    if (obj.has("voltage")) {
-                        voltage = obj.getDouble("voltage");
+
+                    try {
+                        JSONObject obj = new JSONObject(message);
+                        if (message.length() > 768) { //Thermal data would be a lot bigger than this. There is 768 of datapoints, not counting delimiters and decimals.
+                            JSONArray dataPoints = obj.getJSONArray("data");
+                            double[] thermPoints = new double[dataPoints.length()]; //Our new points will be float/double
+                            for (int i = 0; i < dataPoints.length(); i++) {
+                                thermPoints[i] =  dataPoints.getDouble(i);
+                            }
+                        } else {
+                            if (obj.has("voltage")) {
+                                voltage = obj.getDouble("voltage");
+                            }
+                            if (obj.has("soc")) {
+                                soc = obj.getDouble("soc");
+                            }
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                    if (obj.has("soc")) {
-                        soc = obj.getDouble("soc");
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+
+
                 Log.d("Websocket", message);
             }
 

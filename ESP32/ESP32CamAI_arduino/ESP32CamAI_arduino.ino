@@ -51,7 +51,7 @@ int failCount = 0;
 TaskHandle_t Task1;
 Adafruit_MLX90640 mlx;
 float frame[THERMARR];
-byte bytearray[THERMARR];
+//byte bytearray[THERMARR];
 bool isFrameReady = false;
 LightChrono ThermalChrono;
 volatile bool isSendingThermal = false;
@@ -245,8 +245,14 @@ void loop(void) {
 
   if (isFrameReady) {
     isSendingThermal = true;
-    for (size_t i{}; i < THERMARR; ++i) { bytearray[i] = static_cast<byte>(frame[i]); }
-    webSocket.sendBIN(camNo, bytearray, THERMARR);
+    String outStr = "{\"data\":[";
+    for (size_t i{}; i < THERMARR; ++i) { 
+      outStr = outStr + String(frame[i]) + ",";
+      //bytearray[i] = static_cast<byte>(frame[i]);
+    }
+    outStr = outStr + "]}";
+    //webSocket.sendBIN(camNo, bytearray, THERMARR);
+    webSocket.sendTXT(camNo, outStr);
     isFrameReady = false;
     isSendingThermal = false;
   }
