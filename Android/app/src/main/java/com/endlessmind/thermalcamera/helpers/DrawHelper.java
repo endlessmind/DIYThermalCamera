@@ -295,7 +295,7 @@ public class DrawHelper {
                 for (int w=0; w<32; w++) {
                     double t = imageBytes[h*32 + w];
 
-                    int colorIndex = (int) MathHelper.map(t, minTemp, maxTemp, 0, 255);
+                    int colorIndex = (int) MathHelper.map(t * 10, minTemp * 10, maxTemp * 10, 0, 255);
                     int colorCode = camColors[colorIndex];
                     int red = (colorCode & 0xF800) >> 8;;
                     int green = (colorCode & 0x07E0) >> 3;
