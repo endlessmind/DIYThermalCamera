@@ -1,6 +1,6 @@
 # DIYThermalCamera
  Fully working software to build a working thermal camera
-
+![alt tag](https://raw.githubusercontent.com/endlessmind/DIYThermalCamera/master/ThermalCamera_Screenshot.jpg)
 ## Status
 Working:
 - OV2640
